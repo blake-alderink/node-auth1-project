@@ -1,3 +1,7 @@
+
+const Users = require('../users/users-model')
+
+
 /*
   If the user does not have a session saved in the server
 
@@ -6,8 +10,12 @@
     "message": "You shall not pass!"
   }
 */
-function restricted() {
-
+async function restricted(req, res, next) {
+      if (req.session.user) {
+        next()
+      } else {
+        next({message: "this is not gonna work because it is RESTRICTED"})
+      }
 }
 
 /*
@@ -18,7 +26,13 @@ function restricted() {
     "message": "Username taken"
   }
 */
-function checkUsernameFree() {
+async function checkUsernameFree(req, res, next) {
+  
+  if (await Users.findBy({ username: req.body.username})) { //need to use the syntax from below, becuase hte promise will return an array which is truthy even if it is an empty array - need to put it in a variable and use the length of the array as the truthy/falsy value
+          next({message: "Username taken"})
+  } else {
+next();
+  }
 
 }
 
@@ -30,7 +44,17 @@ function checkUsernameFree() {
     "message": "Invalid credentials"
   }
 */
-function checkUsernameExists() {
+async function checkUsernameExists(req, res, next) {
+  try{
+  const users = await Users.findBy({ username: req.body.username})
+  if (users.length) {
+    next()
+} else {
+  next({message: "Invalid credentials"})
+}
+  } catch (err) {
+    next(err)
+  }
 
 }
 
@@ -42,8 +66,20 @@ function checkUsernameExists() {
     "message": "Password must be longer than 3 chars"
   }
 */
-function checkPasswordLength() {
-
+async function checkPasswordLength(req, res, next) {
+  if (req.body.password && req.body.password.length >= 3) {
+    next()
+  } else {
+    next({message: "Password must be longer than 3 chars"})
+  }
 }
 
 // Don't forget to add these to the `exports` object so they can be required in other modules
+
+
+module.exports = {
+  restricted,
+  checkPasswordLength,
+  checkUsernameExists,
+  checkUsernameFree
+}
